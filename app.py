@@ -1,5 +1,5 @@
 
-# app_streamlit_realtime.py
+# app_streamlit_downloadable.py
 import streamlit as st
 import os
 import csv
@@ -9,7 +9,7 @@ import pandas as pd
 from PIL import Image
 
 # 配置路径
-IMAGE_FOLDER = "image"
+IMAGE_FOLDER = r"D:\school\finally\聚类\GMM\训练"
 PAIRS_CSV = "comparison_pairs.csv"
 OUTPUT_CSV = "comparison_results.csv"
 COUNT_CSV = "image_comparison_counts.csv"
@@ -21,7 +21,6 @@ if 'initialized' not in st.session_state:
     st.session_state.image_pairs = []
     st.session_state.current_pair_index = 0
     st.session_state.initialized = False
-
 
 def initialize_app():
     try:
@@ -62,7 +61,6 @@ def initialize_app():
         st.error(f"初始化失败: {str(e)}")
         st.stop()
 
-
 def remove_current_pair_from_csv():
     try:
         current_pair = st.session_state.image_pairs[st.session_state.current_pair_index]
@@ -86,7 +84,6 @@ def remove_current_pair_from_csv():
 
     except Exception as e:
         st.warning(f"删除当前对比项失败：{e}")
-
 
 def show_current_pair():
     if st.session_state.current_pair_index >= len(st.session_state.image_pairs):
@@ -131,7 +128,6 @@ def show_current_pair():
 
     return True
 
-
 def record_selection(result):
     try:
         left_img, right_img = st.session_state.image_pairs[st.session_state.current_pair_index]
@@ -165,9 +161,28 @@ def record_selection(result):
 
     st.rerun()
 
-
+# 页面主内容
 st.title("🏙️ 街景图片对比评分系统")
 st.markdown("请选择哪张图片让你感到更加安全")
+
+# 用户手动下载 CSV 文件（只要存在）
+if os.path.exists(OUTPUT_CSV):
+    with open(OUTPUT_CSV, "rb") as f:
+        st.download_button(
+            label="📥 下载对比结果 CSV",
+            data=f,
+            file_name="comparison_results.csv",
+            mime="text/csv"
+        )
+
+if os.path.exists(COUNT_CSV):
+    with open(COUNT_CSV, "rb") as f:
+        st.download_button(
+            label="📊 下载图片比较次数统计",
+            data=f,
+            file_name="image_comparison_counts.csv",
+            mime="text/csv"
+        )
 
 if not st.session_state.initialized:
     initialize_app()
