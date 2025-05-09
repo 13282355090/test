@@ -9,7 +9,7 @@ import pandas as pd
 from PIL import Image
 
 # 配置路径
-IMAGE_FOLDER = "images"
+IMAGE_FOLDER = "image"
 PAIRS_CSV = "comparison_pairs.csv"
 OUTPUT_CSV = "comparison_results.csv"
 COUNT_CSV = "image_comparison_counts.csv"
