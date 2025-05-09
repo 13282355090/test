@@ -1,5 +1,5 @@
 
-# app_streamlit_downloadable.py
+# app_streamlit_final_protected.py
 import streamlit as st
 import os
 import csv
@@ -13,6 +13,34 @@ IMAGE_FOLDER = "image"
 PAIRS_CSV = "comparison_pairs.csv"
 OUTPUT_CSV = "comparison_results.csv"
 COUNT_CSV = "image_comparison_counts.csv"
+
+# 自动下载模式（仅管理员可见）
+st.sidebar.subheader("管理员登录")
+admin_password = st.sidebar.text_input("请输入管理员密码", type="password")
+
+if admin_password == "2023202090005":
+    st.sidebar.success("身份验证成功")
+    st.success("密码正确，请点击下方按钮下载结果文件：")
+
+    if os.path.exists(OUTPUT_CSV):
+        with open(OUTPUT_CSV, "rb") as f:
+            st.download_button(
+                label="📥 下载对比结果 CSV",
+                data=f,
+                file_name="comparison_results.csv",
+                mime="text/csv"
+            )
+
+    if os.path.exists(COUNT_CSV):
+        with open(COUNT_CSV, "rb") as f:
+            st.download_button(
+                label="📊 下载图片比较次数统计",
+                data=f,
+                file_name="image_comparison_counts.csv",
+                mime="text/csv"
+            )
+
+    st.stop()  # 完全中止后续渲染，防止任何人看到任务界面
 
 # 初始化状态
 if 'initialized' not in st.session_state:
@@ -96,14 +124,6 @@ def show_current_pair():
                     'Comparison_Count': count
                 })
             pd.DataFrame(count_data).to_csv(COUNT_CSV, index=False)
-
-            with open(OUTPUT_CSV, "rb") as f:
-                st.download_button(
-                    label="下载比较结果",
-                    data=f,
-                    file_name="comparison_results.csv",
-                    mime="text/csv"
-                )
         except Exception as e:
             st.error(f"保存结果失败: {str(e)}")
         return False
@@ -164,53 +184,6 @@ def record_selection(result):
 # 页面主内容
 st.title("🏙️ 街景图片对比评分系统")
 st.markdown("请选择哪张图片让你感到更加安全")
-
-
-# 自动下载模式（仅管理员可见）
-st.sidebar.subheader("管理员登录")
-admin_password = st.sidebar.text_input("请输入管理员密码", type="password")
-
-if admin_password == "2023202090005":
-    st.sidebar.success("身份验证成功")
-    st.success("密码正确，请点击下方按钮下载结果文件：")
-
-    if os.path.exists(OUTPUT_CSV):
-        with open(OUTPUT_CSV, "rb") as f:
-            st.download_button(
-                label="📥 下载对比结果 CSV",
-                data=f,
-                file_name="comparison_results.csv",
-                mime="text/csv"
-            )
-
-    if os.path.exists(COUNT_CSV):
-        with open(COUNT_CSV, "rb") as f:
-            st.download_button(
-                label="📊 下载图片比较次数统计",
-                data=f,
-                file_name="image_comparison_counts.csv",
-                mime="text/csv"
-            )
-
-    st.stop()  # 完全中止后续渲染，防止任何人看到任务界面
-
-if os.path.exists(OUTPUT_CSV):
-    with open(OUTPUT_CSV, "rb") as f:
-        st.download_button(
-            label="📥 下载对比结果 CSV",
-            data=f,
-            file_name="comparison_results.csv",
-            mime="text/csv"
-        )
-
-if os.path.exists(COUNT_CSV):
-    with open(COUNT_CSV, "rb") as f:
-        st.download_button(
-            label="📊 下载图片比较次数统计",
-            data=f,
-            file_name="image_comparison_counts.csv",
-            mime="text/csv"
-        )
 
 if not st.session_state.initialized:
     initialize_app()
