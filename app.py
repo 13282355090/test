@@ -165,7 +165,33 @@ def record_selection(result):
 st.title("🏙️ 街景图片对比评分系统")
 st.markdown("请选择哪张图片让你感到更加安全")
 
-# 用户手动下载 CSV 文件（只要存在）
+
+# 管理员密码控制下载按钮
+st.sidebar.subheader("管理员登录")
+admin_password = st.sidebar.text_input("请输入管理员密码", type="password")
+
+if admin_password == "2023202090005":
+    st.sidebar.success("管理员身份已验证，可下载结果文件")
+    if os.path.exists(OUTPUT_CSV):
+        with open(OUTPUT_CSV, "rb") as f:
+            st.download_button(
+                label="📥 下载对比结果 CSV",
+                data=f,
+                file_name="comparison_results.csv",
+                mime="text/csv"
+            )
+
+    if os.path.exists(COUNT_CSV):
+        with open(COUNT_CSV, "rb") as f:
+            st.download_button(
+                label="📊 下载图片比较次数统计",
+                data=f,
+                file_name="image_comparison_counts.csv",
+                mime="text/csv"
+            )
+else:
+    st.sidebar.info("请输入管理员密码以启用下载按钮")
+
 if os.path.exists(OUTPUT_CSV):
     with open(OUTPUT_CSV, "rb") as f:
         st.download_button(
