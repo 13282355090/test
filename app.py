@@ -166,12 +166,14 @@ st.title("🏙️ 街景图片对比评分系统")
 st.markdown("请选择哪张图片让你感到更加安全")
 
 
-# 管理员密码控制下载按钮
+# 自动下载模式（仅管理员可见）
 st.sidebar.subheader("管理员登录")
 admin_password = st.sidebar.text_input("请输入管理员密码", type="password")
 
 if admin_password == "2023202090005":
-    st.sidebar.success("管理员身份已验证，可下载结果文件")
+    st.sidebar.success("身份验证成功")
+    st.success("密码正确，请点击下方按钮下载结果文件：")
+
     if os.path.exists(OUTPUT_CSV):
         with open(OUTPUT_CSV, "rb") as f:
             st.download_button(
@@ -189,8 +191,10 @@ if admin_password == "2023202090005":
                 file_name="image_comparison_counts.csv",
                 mime="text/csv"
             )
+
+    st.stop()  # 阻止显示任何其他内容
 else:
-    st.sidebar.info("请输入管理员密码以启用下载按钮")
+    st.sidebar.info("请输入管理员密码以启用结果下载功能")
 
 if os.path.exists(OUTPUT_CSV):
     with open(OUTPUT_CSV, "rb") as f:
