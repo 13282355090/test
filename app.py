@@ -192,9 +192,7 @@ if admin_password == "2023202090005":
                 mime="text/csv"
             )
 
-    st.stop()  # 阻止显示任何其他内容
-else:
-    st.sidebar.info("请输入管理员密码以启用结果下载功能")
+    st.stop()  # 完全中止后续渲染，防止任何人看到任务界面
 
 if os.path.exists(OUTPUT_CSV):
     with open(OUTPUT_CSV, "rb") as f:
