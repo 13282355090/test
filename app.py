@@ -62,6 +62,16 @@ TITLE_MAP = {
     5: "财富"
 }
 
+# 每个文件的选择标题映射
+SELECT_TEXT_MAP = {
+    0: "请选择哪张图片让你感到更加美丽:",
+    1: "请选择哪张图片让你感到更加无聊:",
+    2: "请选择哪张图片让你感到更加压抑:",
+    3: "请选择哪张图片让你感到更加有活力:",
+    4: "请选择哪张图片让你感到更加安全:",
+    5: "请选择哪张图片让你感到更加富有:"
+}
+
 def initialize_app():
     try:
         current_file = PAIRS_FILES[st.session_state.current_file_index]
@@ -136,6 +146,11 @@ def show_current_pair():
     st.title("街景图片对比评分系统")
     st.subheader(f"当前对比计划: {TITLE_MAP[st.session_state.current_file_index]}")  # 显示当前计划的标题
     st.write(f"**进度**: {st.session_state.current_pair_index + 1}/{len(st.session_state.image_pairs)}")
+    
+    # 动态更新选择标题
+    select_text = SELECT_TEXT_MAP[st.session_state.current_file_index]
+    st.write(f"### {select_text}")
+
     col1, col2 = st.columns(2)
 
     try:
@@ -145,7 +160,6 @@ def show_current_pair():
         with col2:
             st.image(Image.open(right_img), use_container_width=True, caption=f"右图: {os.path.basename(right_img)}")
             st.write(f"已比较次数: {st.session_state.comparison_counts[right_img]}")
-        st.write("### 请选择哪张图片让你感到更加安全:")
     except Exception as e:
         st.error(f"加载图片失败: {str(e)}")
         st.session_state.current_pair_index += 1
