@@ -3,3 +3,4 @@ pillow
 pandas
 trueskill
 uuid
+streamlit-cookies-manager
