@@ -38,7 +38,7 @@ if admin_password == "2023202090005":
                 mime="text/csv"
             )
 
-    st.stop()  # 中止主界面
+    st.stop()
 
 # 初始化状态
 if 'initialized' not in st.session_state:
@@ -47,6 +47,7 @@ if 'initialized' not in st.session_state:
     st.session_state.image_pairs = []
     st.session_state.current_pair_index = 0
     st.session_state.initialized = False
+    st.session_state.need_rerun = False
 
 def initialize_app():
     try:
@@ -130,73 +131,12 @@ def show_current_pair():
 
     try:
         with col1:
-            st.image(Image.open(left_img), use_column_width=True, caption=f"左图: {os.path.basename(left_img)}")
+            st.image(Image.open(left_img), use_container_width=True, caption=f"左图: {os.path.basename(left_img)}")
             st.write(f"已比较次数: {st.session_state.comparison_counts[left_img]}")
         with col2:
-            st.image(Image.open(right_img), use_column_width=True, caption=f"右图: {os.path.basename(right_img)}")
+            st.image(Image.open(right_img), use_container_width=True, caption=f"右图: {os.path.basename(right_img)}")
             st.write(f"已比较次数: {st.session_state.comparison_counts[right_img]}")
         st.write("### 请选择哪张图片让你感到更加安全:")
     except Exception as e:
         st.error(f"加载图片失败: {str(e)}")
         st.session_state.current_pair_index += 1
-        st.rerun()
-        return None
-
-    return True
-
-def record_selection(result):
-    try:
-        left_img, right_img = st.session_state.image_pairs[st.session_state.current_pair_index]
-
-        # 更新评分
-        if result == "left":
-            st.session_state.ratings[left_img], st.session_state.ratings[right_img] = rate_1vs1(
-                st.session_state.ratings[left_img], st.session_state.ratings[right_img], drawn=False)
-        elif result == "right":
-            st.session_state.ratings[right_img], st.session_state.ratings[left_img] = rate_1vs1(
-                st.session_state.ratings[right_img], st.session_state.ratings[left_img], drawn=False)
-        else:
-            st.session_state.ratings[left_img], st.session_state.ratings[right_img] = rate_1vs1(
-                st.session_state.ratings[left_img], st.session_state.ratings[right_img], drawn=True)
-
-        # 更新比较次数
-        st.session_state.comparison_counts[left_img] += 1
-        st.session_state.comparison_counts[right_img] += 1
-
-        # 写入CSV结果
-        with open(OUTPUT_CSV, 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                os.path.basename(left_img),
-                os.path.basename(right_img),
-                result,
-                f"{st.session_state.ratings[left_img].mu:.3f}±{st.session_state.ratings[left_img].sigma:.3f}",
-                f"{st.session_state.ratings[right_img].mu:.3f}±{st.session_state.ratings[right_img].sigma:.3f}"
-            ])
-            f.flush()
-
-        remove_current_pair_from_csv()
-        st.session_state.current_pair_index += 1
-        initialize_app()
-
-    except Exception as e:
-        st.error(f"记录选择时出错: {str(e)}")
-
-    st.rerun()
-
-# 页面主内容
-st.title("🏙️ 街景图片对比评分系统")
-st.markdown("请选择哪张图片让你感到更加安全")
-
-if not st.session_state.initialized:
-    initialize_app()
-
-if st.session_state.initialized:
-    if show_current_pair():
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.button("⬅️ 选择左侧", on_click=record_selection, args=("left",), use_container_width=True)
-        with col2:
-            st.button("🟰 两者相当", on_click=record_selection, args=("equal",), use_container_width=True)
-        with col3:
-            st.button("➡️ 选择右侧", on_click=record_selection, args=("right",), use_container_width=True)
