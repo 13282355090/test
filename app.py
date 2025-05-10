@@ -1,4 +1,3 @@
-# app_streamlit_final_protected.py
 import streamlit as st
 import os
 import csv
@@ -39,7 +38,7 @@ if admin_password == "2023202090005":
                 mime="text/csv"
             )
 
-    st.stop()  # 完全中止后续渲染，防止任何人看到任务界面
+    st.stop()  # 中止主界面
 
 # 初始化状态
 if 'initialized' not in st.session_state:
@@ -70,8 +69,6 @@ def initialize_app():
                     if not os.path.exists(left_img) or not os.path.exists(right_img):
                         continue
                     st.session_state.image_pairs.append((left_img, right_img))
-                    st.session_state.comparison_counts[left_img] += 1
-                    st.session_state.comparison_counts[right_img] += 1
 
         if not st.session_state.image_pairs:
             st.error("没有有效的图片对比对！")
@@ -134,11 +131,11 @@ def show_current_pair():
     try:
         with col1:
             st.image(Image.open(left_img), use_column_width=True, caption=f"左图: {os.path.basename(left_img)}")
-            st.write(f"比较次数: {st.session_state.comparison_counts[left_img]}")
+            st.write(f"已比较次数: {st.session_state.comparison_counts[left_img]}")
         with col2:
             st.image(Image.open(right_img), use_column_width=True, caption=f"右图: {os.path.basename(right_img)}")
-            st.write(f"比较次数: {st.session_state.comparison_counts[right_img]}")
-        st.write("### 请选择哪张图片让你感到更加安全: ")
+            st.write(f"已比较次数: {st.session_state.comparison_counts[right_img]}")
+        st.write("### 请选择哪张图片让你感到更加安全:")
     except Exception as e:
         st.error(f"加载图片失败: {str(e)}")
         st.session_state.current_pair_index += 1
@@ -151,6 +148,7 @@ def record_selection(result):
     try:
         left_img, right_img = st.session_state.image_pairs[st.session_state.current_pair_index]
 
+        # 更新评分
         if result == "left":
             st.session_state.ratings[left_img], st.session_state.ratings[right_img] = rate_1vs1(
                 st.session_state.ratings[left_img], st.session_state.ratings[right_img], drawn=False)
@@ -161,9 +159,14 @@ def record_selection(result):
             st.session_state.ratings[left_img], st.session_state.ratings[right_img] = rate_1vs1(
                 st.session_state.ratings[left_img], st.session_state.ratings[right_img], drawn=True)
 
+        # 更新比较次数
+        st.session_state.comparison_counts[left_img] += 1
+        st.session_state.comparison_counts[right_img] += 1
+
+        # 写入CSV结果
         with open(OUTPUT_CSV, 'a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([ 
+            writer.writerow([
                 os.path.basename(left_img),
                 os.path.basename(right_img),
                 result,
@@ -172,10 +175,9 @@ def record_selection(result):
             ])
             f.flush()
 
-        # 删除当前对比项并重新读取
         remove_current_pair_from_csv()
         st.session_state.current_pair_index += 1
-        initialize_app()  # 重新加载对比计划
+        initialize_app()
 
     except Exception as e:
         st.error(f"记录选择时出错: {str(e)}")
