@@ -4,6 +4,7 @@ import csv
 from collections import defaultdict
 from trueskill import Rating, rate_1vs1
 from PIL import Image
+import io
 
 # 配置路径
 IMAGE_FOLDER = "image"
@@ -33,9 +34,10 @@ if admin_password == "2023202090005":
     # 下载图片比较次数统计文件
     if os.path.exists(COUNT_CSV):
         with open(COUNT_CSV, "rb") as f:
+            bytes_data = f.read()
             st.download_button(
                 label="📊 下载图片比较次数统计",
-                data=f,
+                data=bytes_data,
                 file_name="image_comparison_counts.csv",
                 mime="text/csv"
             )
@@ -44,10 +46,11 @@ if admin_password == "2023202090005":
     for input_file, output_file in OUTPUT_FILES.items():
         if os.path.exists(output_file):
             with open(output_file, "rb") as f:
+                file_bytes = f.read()
                 label_name = output_file.replace("comparison_results_", "").replace(".csv", "")
                 st.download_button(
                     label=f"⬇️ 下载 {label_name} 结果文件",
-                    data=f,
+                    data=file_bytes,
                     file_name=output_file,
                     mime="text/csv"
                 )
