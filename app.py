@@ -1,4 +1,3 @@
-
 # app_streamlit_final_protected.py
 import streamlit as st
 import os
@@ -139,7 +138,7 @@ def show_current_pair():
         with col2:
             st.image(Image.open(right_img), use_column_width=True, caption=f"右图: {os.path.basename(right_img)}")
             st.write(f"比较次数: {st.session_state.comparison_counts[right_img]}")
-        st.write("### 请选择哪张图片让你感到更加安全:")
+        st.write("### 请选择哪张图片让你感到更加安全: ")
     except Exception as e:
         st.error(f"加载图片失败: {str(e)}")
         st.session_state.current_pair_index += 1
@@ -164,7 +163,7 @@ def record_selection(result):
 
         with open(OUTPUT_CSV, 'a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([
+            writer.writerow([ 
                 os.path.basename(left_img),
                 os.path.basename(right_img),
                 result,
@@ -173,8 +172,10 @@ def record_selection(result):
             ])
             f.flush()
 
+        # 删除当前对比项并重新读取
         remove_current_pair_from_csv()
         st.session_state.current_pair_index += 1
+        initialize_app()  # 重新加载对比计划
 
     except Exception as e:
         st.error(f"记录选择时出错: {str(e)}")
