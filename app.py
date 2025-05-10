@@ -23,6 +23,40 @@ OUTPUT_FILES = {
 }
 COUNT_CSV = "image_comparison_counts.csv"
 
+# 管理员登录
+st.sidebar.subheader("管理员登录")
+admin_password = st.sidebar.text_input("请输入管理员密码", type="password")
+
+if admin_password == "2023202090005":
+    st.sidebar.success("身份验证成功")
+    st.success("密码正确，请点击下方按钮下载所有结果文件：")
+
+    # 下载图片比较次数统计文件
+    if os.path.exists(COUNT_CSV):
+        with open(COUNT_CSV, "rb") as f:
+            bytes_data = f.read()
+            st.download_button(
+                label="📊 下载图片比较次数统计",
+                data=bytes_data,
+                file_name="image_comparison_counts.csv",
+                mime="text/csv"
+            )
+
+    # 下载每个对比计划的结果文件
+    for input_file, output_file in OUTPUT_FILES.items():
+        if os.path.exists(output_file):
+            with open(output_file, "rb") as f:
+                file_bytes = f.read()
+                label_name = output_file.replace("comparison_results_", "").replace(".csv", "")
+                st.download_button(
+                    label=f"⬇️ 下载 {label_name} 结果文件",
+                    data=file_bytes,
+                    file_name=output_file,
+                    mime="text/csv"
+                )
+
+    st.stop()
+
 # 使用 query_params 获取 URL 参数中的 user_id，若没有则生成并设置
 query_params = st.query_params
 if "user_id" in query_params:
