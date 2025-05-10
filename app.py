@@ -52,6 +52,16 @@ if 'initialized' not in st.session_state:
     st.session_state.need_rerun = False
     st.session_state.current_file_index = 0
 
+# 每个对比计划的标题映射
+TITLE_MAP = {
+    0: "美丽",
+    1: "无聊",
+    2: "压抑",
+    3: "活力",
+    4: "安全",
+    5: "财富"
+}
+
 def initialize_app():
     try:
         current_file = PAIRS_FILES[st.session_state.current_file_index]
@@ -70,6 +80,8 @@ def initialize_app():
             st.error("没有有效的图片对比对！")
             st.stop()
 
+        # 根据当前文件生成对应的输出文件
+        current_file = PAIRS_FILES[st.session_state.current_file_index]
         output_file = OUTPUT_FILES[current_file]
         if not os.path.exists(output_file):
             with open(output_file, 'w', newline='') as f:
@@ -120,7 +132,9 @@ def show_current_pair():
             return False
 
     left_img, right_img = st.session_state.image_pairs[st.session_state.current_pair_index]
-    st.title("街景图片对比评分系统")  # 统一显示这个标题
+    # 根据当前文件更新标题
+    st.title("街景图片对比评分系统")
+    st.subheader(f"当前对比计划: {TITLE_MAP[st.session_state.current_file_index]}")  # 显示当前计划的标题
     st.write(f"**进度**: {st.session_state.current_pair_index + 1}/{len(st.session_state.image_pairs)}")
     col1, col2 = st.columns(2)
 
