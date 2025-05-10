@@ -5,6 +5,7 @@ from collections import defaultdict
 from trueskill import Rating, rate_1vs1
 from PIL import Image
 import os
+from streamlit_cookies_manager import Cookies
 
 # 配置路径
 IMAGE_FOLDER = "image"
@@ -22,6 +23,22 @@ OUTPUT_FILES = {
     "comparison_pairs_wealthy.csv": "comparison_results_wealthy.csv"
 }
 COUNT_CSV = "image_comparison_counts.csv"
+
+# 使用 cookies 管理用户标识符
+cookies = Cookies(st)
+
+# 检查是否已有用户唯一标识符
+if 'user_id' not in cookies:
+    # 如果没有，生成一个新的 UUID 并存入 cookies
+    user_id = str(uuid.uuid4())  # 生成唯一的 UUID
+    cookies['user_id'] = user_id
+    cookies.save()  # 保存 Cookie
+else:
+    # 如果已有，则读取存储的 user_id
+    user_id = cookies['user_id']
+
+# 显示当前用户 ID（可用于调试）
+st.write(f"当前用户 ID: {user_id}")
 
 # 管理员登录
 st.sidebar.subheader("管理员登录")
@@ -56,16 +73,6 @@ if admin_password == "2023202090005":
                 )
 
     st.stop()
-
-# 使用 query_params 获取 URL 参数中的 user_id，若没有则生成并设置
-query_params = st.query_params
-if "user_id" in query_params:
-    user_id = query_params["user_id"]
-else:
-    user_id = str(uuid.uuid4())
-    st.query_params = {"user_id": user_id}
-
-st.write(f"当前用户 ID: {user_id}")
 
 # 初始化状态
 if 'initialized' not in st.session_state:
@@ -202,7 +209,7 @@ def record_selection(result):
                 result,
                 f"{st.session_state.ratings[left_img].mu:.3f}±{st.session_state.ratings[left_img].sigma:.3f}",
                 f"{st.session_state.ratings[right_img].mu:.3f}±{st.session_state.ratings[right_img].sigma:.3f}",
-                user_id  # 使用 URL 中的 user_id
+                user_id  # 使用 Cookies 存储的 user_id
             ])
 
         remove_current_pair_from_csv()
