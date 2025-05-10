@@ -28,8 +28,9 @@ admin_password = st.sidebar.text_input("请输入管理员密码", type="passwor
 
 if admin_password == "2023202090005":
     st.sidebar.success("身份验证成功")
-    st.success("密码正确，请点击下方按钮下载结果文件：")
+    st.success("密码正确，请点击下方按钮下载所有结果文件：")
 
+    # 下载图片比较次数统计文件
     if os.path.exists(COUNT_CSV):
         with open(COUNT_CSV, "rb") as f:
             st.download_button(
@@ -38,6 +39,19 @@ if admin_password == "2023202090005":
                 file_name="image_comparison_counts.csv",
                 mime="text/csv"
             )
+
+    # 下载每个对比计划的结果文件
+    for input_file, output_file in OUTPUT_FILES.items():
+        if os.path.exists(output_file):
+            with open(output_file, "rb") as f:
+                label_name = output_file.replace("comparison_results_", "").replace(".csv", "")
+                st.download_button(
+                    label=f"⬇️ 下载 {label_name} 结果文件",
+                    data=f,
+                    file_name=output_file,
+                    mime="text/csv"
+                )
+
     st.stop()
 
 # 初始化状态
