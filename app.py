@@ -4,6 +4,7 @@ import csv
 from collections import defaultdict
 from trueskill import Rating, rate_1vs1
 from PIL import Image
+import os
 
 # 配置路径
 IMAGE_FOLDER = "image"
@@ -22,13 +23,13 @@ OUTPUT_FILES = {
 }
 COUNT_CSV = "image_comparison_counts.csv"
 
-# 检查 URL 参数中是否已有 user_id，没有则生成
-query_params = st.experimental_get_query_params()
+# 使用 query_params 获取 URL 参数中的 user_id，若没有则生成并设置
+query_params = st.query_params
 if "user_id" in query_params:
-    user_id = query_params["user_id"][0]
+    user_id = query_params["user_id"]
 else:
     user_id = str(uuid.uuid4())
-    st.experimental_set_query_params(user_id=user_id)
+    st.query_params = {"user_id": user_id}
 
 st.write(f"当前用户 ID: {user_id}")
 
@@ -64,7 +65,8 @@ def initialize_app():
             reader = csv.reader(f)
             next(reader)
             for row in reader:
-                if len(row) >= 2:
+                # 校验图片路径有效
+                if len(row) >= 2 and row[0].strip() and row[1].strip():
                     left_img = os.path.join(IMAGE_FOLDER, row[0].strip())
                     right_img = os.path.join(IMAGE_FOLDER, row[1].strip())
                     if os.path.exists(left_img) and os.path.exists(right_img):
