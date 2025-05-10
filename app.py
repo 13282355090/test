@@ -4,7 +4,6 @@ import csv
 from collections import defaultdict
 from trueskill import Rating, rate_1vs1
 from PIL import Image
-from streamlit_cookies_manager import Cookies
 
 # 配置路径
 IMAGE_FOLDER = "image"
@@ -23,23 +22,39 @@ OUTPUT_FILES = {
 }
 COUNT_CSV = "image_comparison_counts.csv"
 
-# 使用 cookies 管理用户标识符
-cookies = Cookies(st)
-
-# 检查是否已有用户唯一标识符
-if 'user_id' not in cookies:
-    # 如果没有，生成一个新的 UUID 并存入 cookies
-    user_id = str(uuid.uuid4())  # 生成唯一的 UUID
-    cookies['user_id'] = user_id
-    cookies.save()  # 保存 Cookie
+# 检查 URL 参数中是否已有 user_id，没有则生成
+query_params = st.experimental_get_query_params()
+if "user_id" in query_params:
+    user_id = query_params["user_id"][0]
 else:
-    # 如果已有，则读取存储的 user_id
-    user_id = cookies['user_id']
+    user_id = str(uuid.uuid4())
+    st.experimental_set_query_params(user_id=user_id)
 
-# 显示当前用户 ID（可用于调试）
 st.write(f"当前用户 ID: {user_id}")
 
-# 其余应用代码...
+# 初始化状态
+if 'initialized' not in st.session_state:
+    st.session_state.ratings = defaultdict(lambda: Rating())
+    st.session_state.comparison_counts = defaultdict(int)
+    st.session_state.image_pairs = []
+    st.session_state.current_pair_index = 0
+    st.session_state.initialized = False
+    st.session_state.need_rerun = False
+    st.session_state.current_file_index = 0
+
+TITLE_MAP = {
+    0: "美丽", 1: "无聊", 2: "压抑", 3: "活力", 4: "安全", 5: "财富"
+}
+
+SELECT_TEXT_MAP = {
+    0: "请选择哪张图片让你感到更加美丽:",
+    1: "请选择哪张图片让你感到更加无聊:",
+    2: "请选择哪张图片让你感到更加压抑:",
+    3: "请选择哪张图片让你感到更加有活力:",
+    4: "请选择哪张图片让你感到更加安全:",
+    5: "请选择哪张图片让你感到更加富有:"
+}
+
 def initialize_app():
     while st.session_state.current_file_index < len(PAIRS_FILES):
         current_file = PAIRS_FILES[st.session_state.current_file_index]
@@ -151,7 +166,7 @@ def record_selection(result):
                 result,
                 f"{st.session_state.ratings[left_img].mu:.3f}±{st.session_state.ratings[left_img].sigma:.3f}",
                 f"{st.session_state.ratings[right_img].mu:.3f}±{st.session_state.ratings[right_img].sigma:.3f}",
-                user_id  # 使用 cookies 保存的 user_id
+                user_id  # 使用 URL 中的 user_id
             ])
 
         remove_current_pair_from_csv()
