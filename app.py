@@ -6,7 +6,7 @@ from collections import defaultdict
 from trueskill import Rating, rate_1vs1
 from PIL import Image
 
-IMAGE_FOLDER = "image"
+IMAGE_FOLDER = "images"
 PERCEPTIONS = ["美丽", "无聊", "压抑", "活力", "安全", "富有"]
 RESULT_CSV_TEMPLATE = "comparison_results_{}.csv"
 COUNT_CSV = "image_comparison_counts.csv"
