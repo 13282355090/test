@@ -1,14 +1,14 @@
 import streamlit as st
 import os
 import csv
-from itertools import combinations
+import random
 from collections import defaultdict
 from trueskill import Rating, rate_1vs1
 from PIL import Image
 
 # 配置路径
 IMAGE_FOLDER = "images"
-PER_IMAGE_MIN_COMPARISONS = 2
+PER_IMAGE_MIN_COMPARISONS = 4  # 每张图片必须对比超过4次
 TITLE_MAP = {
     0: "美丽", 1: "无聊", 2: "压抑", 3: "活力", 4: "安全", 5: "财富"
 }
@@ -58,13 +58,12 @@ def initialize_app():
         st.error("未找到任何图片。")
         st.stop()
 
+    # 随机选择图片对，但概率会根据已对比次数调整
     comparisons = st.session_state.image_counts_by_attr[current_attr]
-    valid_pairs = [
-        pair for pair in combinations(image_files, 2)
-        if comparisons[pair[0]] < PER_IMAGE_MIN_COMPARISONS or comparisons[pair[1]] < PER_IMAGE_MIN_COMPARISONS
-    ]
+    valid_images = [img for img in image_files if comparisons[img] < PER_IMAGE_MIN_COMPARISONS]
 
-    if not valid_pairs:
+    # 如果所有图片都已经比较超过4次，则结束当前感知维度
+    if not valid_images:
         st.session_state.current_file_index += 1
         if st.session_state.current_file_index >= len(TITLE_MAP):
             st.success("所有感知维度的对比任务已完成，谢谢参与！")
@@ -73,7 +72,11 @@ def initialize_app():
             initialize_app()
             return
 
-    st.session_state.image_pairs = valid_pairs
+    # 根据图片的对比次数调整选择概率
+    weights = [max(PER_IMAGE_MIN_COMPARISONS - comparisons[img], 1) for img in valid_images]
+    selected_pair = random.sample(valid_images, 2, counts=weights)
+    
+    st.session_state.image_pairs = [selected_pair]
     st.session_state.current_pair_index = 0
     st.session_state.initialized = True
 
