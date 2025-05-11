@@ -95,22 +95,34 @@ def load_comparison_counts(image_files):
 
 def initialize_app():
     while st.session_state.current_file_index < len(PAIRS_FILES):
-        image_files = [img for img in os.listdir(IMAGE_FOLDER) if img.lower().endswith(('.jpg', '.png', '.jpeg'))]
+        image_files = [img for img in os.listdir(IMAGE_FOLDER)
+                       if img.lower().endswith(('.jpg', '.png', '.jpeg'))]
+
         if len(image_files) < 2:
             st.error("图片数量不足，至少需要2张图片。")
             st.stop()
 
         st.session_state.all_images = image_files
+
+        # 初始化或读取计数
         load_comparison_counts(image_files)
 
-        current_file = PAIRS_FILES[st.session_state.current_file_index]
-        if not os.path.exists(OUTPUT_FILES[current_file]):
-            with open(OUTPUT_FILES[current_file], 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(['User_ID', 'Left_Image', 'Right_Image', 'Result', 'Left_Rating', 'Right_Rating'])
-
-        st.session_state.initialized = True
-        return
+        # 检查是否还有图片对比次数不足
+        incomplete_images = [img for img in image_files if st.session_state.comparison_counts[img] < 4]
+        if len(incomplete_images) >= 2:
+            # 初始化结果文件
+            current_file = PAIRS_FILES[st.session_state.current_file_index]
+            if not os.path.exists(OUTPUT_FILES[current_file]):
+                with open(OUTPUT_FILES[current_file], 'w', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(['User_ID', 'Left_Image', 'Right_Image', 'Result',
+                                     'Left_Rating', 'Right_Rating'])
+            st.session_state.initialized = True
+            return
+        else:
+            # 当前感知维度已完成，进入下一维度
+            st.session_state.current_file_index += 1
+            continue
 
     st.success("所有对比计划已完成！")
     st.stop()
@@ -120,9 +132,7 @@ def get_next_pair():
     available = [img for img in st.session_state.all_images if counts[img] < 4]
 
     if len(available) < 2:
-        st.session_state.current_file_index += 1
-        st.session_state.initialized = False
-        st.rerun()
+        # 不在这里跳维度，交由 initialize_app 控制
         return None, None
 
     weights = [4 - counts[img] for img in available]
