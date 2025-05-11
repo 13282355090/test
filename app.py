@@ -21,6 +21,40 @@ selected_dim = st.selectbox("请选择您要对比的感知维度：", options=P
 dim_index = PERCEPTIONS.index(selected_dim)
 result_csv = RESULT_CSV_TEMPLATE.format(selected_dim)
 
+# 管理员登录
+st.sidebar.subheader("管理员登录")
+admin_password = st.sidebar.text_input("请输入管理员密码", type="password")
+
+if admin_password == "2023202090005":
+    st.sidebar.success("身份验证成功")
+    st.success("密码正确，请点击下方按钮下载所有结果文件：")
+
+    # 下载比较次数统计文件
+    if os.path.exists(COUNT_CSV):
+        with open(COUNT_CSV, "rb") as f:
+            bytes_data = f.read()
+            st.download_button(
+                label="📊 下载图片比较次数统计",
+                data=bytes_data,
+                file_name="image_comparison_counts.csv",
+                mime="text/csv"
+            )
+
+    # 下载每个维度的结果文件
+    for dim in PERCEPTIONS:
+        output_file = RESULT_CSV_TEMPLATE.format(dim)
+        if os.path.exists(output_file):
+            with open(output_file, "rb") as f:
+                file_bytes = f.read()
+                st.download_button(
+                    label=f"⬇️ 下载 {dim} 结果文件",
+                    data=file_bytes,
+                    file_name=output_file,
+                    mime="text/csv"
+                )
+
+    st.stop()
+
 # 用户 ID 输入
 if 'user_id' not in st.session_state:
     user_id_input = st.text_input("请输入你的用户ID以开始：")
@@ -33,7 +67,7 @@ if 'user_id' not in st.session_state:
 # 初始化状态
 if 'ratings' not in st.session_state:
     st.session_state.ratings = defaultdict(lambda: Rating())
-    st.session_state.comparison_counts = {img: [0]*len(PERCEPTIONS) for img in ALL_IMAGES}
+    st.session_state.comparison_counts = {img: [0] * len(PERCEPTIONS) for img in ALL_IMAGES}
 
 # 加载已有比较数据
 if os.path.exists(COUNT_CSV):
