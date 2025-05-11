@@ -6,7 +6,7 @@ from collections import defaultdict
 from trueskill import Rating, rate_1vs1
 from PIL import Image
 
-IMAGE_FOLDER = "images"
+IMAGE_FOLDER = "image"
 PERCEPTIONS = ["美丽", "无聊", "压抑", "活力", "安全", "富有"]
 RESULT_CSV_TEMPLATE = "comparison_results_{}.csv"
 COUNT_CSV = "image_comparison_counts.csv"
@@ -87,12 +87,20 @@ if st.session_state.current_dim >= len(PERCEPTIONS):
 current_dim_name = PERCEPTIONS[st.session_state.current_dim]
 result_csv = RESULT_CSV_TEMPLATE.format(current_dim_name)
 
-# 权重策略（次数越多，权重越小）
+# 权重策略（次数越多，权重越小），同时排除已比较 5 次以上的图片
 def weighted_random_pair():
-    weights = [1 / (1 + st.session_state.comparison_counts[img][st.session_state.current_dim]) for img in ALL_IMAGES]
-    pair = random.choices(ALL_IMAGES, weights=weights, k=2)
+    # 过滤掉已比较超过5次的图片
+    valid_images = [img for img in ALL_IMAGES if st.session_state.comparison_counts[img][st.session_state.current_dim] < 5]
+    
+    # 如果所有图片都已对比5次或更多，结束对比
+    if not valid_images:
+        st.success("所有图片都已对比 5 次，感谢您的参与！")
+        st.stop()
+    
+    weights = [1 / (1 + st.session_state.comparison_counts[img][st.session_state.current_dim]) for img in valid_images]
+    pair = random.choices(valid_images, weights=weights, k=2)
     while pair[0] == pair[1]:
-        pair[1] = random.choices(ALL_IMAGES, weights=weights, k=1)[0]
+        pair[1] = random.choices(valid_images, weights=weights, k=1)[0]
     return pair
 
 left_img, right_img = weighted_random_pair()
