@@ -1,27 +1,23 @@
-import streamlit as st
-import os
 import random
 import csv
-from collections import defaultdict
+import os
+import streamlit as st
 from trueskill import Rating, rate_1vs1
 from PIL import Image
+from collections import defaultdict
 
 # 配置路径
 IMAGE_FOLDER = "images"
-PAIRS_FILES = [
-    "comparison_pairs_beautiful.csv", "comparison_pairs_boring.csv",
-    "comparison_pairs_depressing.csv", "comparison_pairs_lively.csv",
-    "comparison_pairs_safety.csv", "comparison_pairs_wealthy.csv"
-]
 OUTPUT_FILES = {
-    "comparison_pairs_beautiful.csv": "comparison_results_beautiful.csv",
-    "comparison_pairs_boring.csv": "comparison_results_boring.csv",
-    "comparison_pairs_depressing.csv": "comparison_results_depressing.csv",
-    "comparison_pairs_lively.csv": "comparison_results_lively.csv",
-    "comparison_pairs_safety.csv": "comparison_results_safety.csv",
-    "comparison_pairs_wealthy.csv": "comparison_results_wealthy.csv"
+    "comparison_results_beautiful.csv": "comparison_results_beautiful.csv",
+    "comparison_results_boring.csv": "comparison_results_boring.csv",
+    "comparison_results_depressing.csv": "comparison_results_depressing.csv",
+    "comparison_results_lively.csv": "comparison_results_lively.csv",
+    "comparison_results_safety.csv": "comparison_results_safety.csv",
+    "comparison_results_wealthy.csv": "comparison_results_wealthy.csv"
 }
 COUNT_CSV = "image_comparison_counts.csv"
+IMAGES = [f for f in os.listdir(IMAGE_FOLDER) if f.endswith(('.jpg', '.png', '.jpeg'))]
 
 # 管理员登录
 st.sidebar.subheader("管理员登录")
@@ -30,7 +26,7 @@ admin_password = st.sidebar.text_input("请输入管理员密码", type="passwor
 if admin_password == "2023202090005":
     st.sidebar.success("身份验证成功")
     st.success("密码正确，请点击下方按钮下载所有结果文件：")
-
+    
     if os.path.exists(COUNT_CSV):
         with open(COUNT_CSV, "rb") as f:
             bytes_data = f.read()
@@ -40,8 +36,7 @@ if admin_password == "2023202090005":
                 file_name="image_comparison_counts.csv",
                 mime="text/csv"
             )
-
-    for input_file, output_file in OUTPUT_FILES.items():
+    for output_file in OUTPUT_FILES.values():
         if os.path.exists(output_file):
             with open(output_file, "rb") as f:
                 file_bytes = f.read()
@@ -52,7 +47,6 @@ if admin_password == "2023202090005":
                     file_name=output_file,
                     mime="text/csv"
                 )
-
     st.stop()
 
 # 用户 ID 输入
@@ -64,96 +58,95 @@ if 'user_id' not in st.session_state:
     else:
         st.stop()
 
-
 # 初始化状态
 if 'initialized' not in st.session_state:
     st.session_state.ratings = defaultdict(lambda: Rating())
     st.session_state.comparison_counts = defaultdict(int)
-    st.session_state.image_list = []
-    st.session_state.current_pair_index = 0
-    st.session_state.initialized = False
     st.session_state.need_rerun = False
-    st.session_state.current_file_index = 0
 
-TITLE_MAP = {
-    0: "美丽", 1: "无聊", 2: "压抑", 3: "活力", 4: "安全", 5: "财富"
-}
-SELECT_TEXT_MAP = {
-    0: "请选择哪张图片让你感到更加美丽: ",
-    1: "请选择哪张图片让你感到更加无聊: ",
-    2: "请选择哪张图片让你感到更加压抑: ",
-    3: "请选择哪张图片让你感到更加有活力: ",
-    4: "请选择哪张图片让你感到更加安全: ",
-    5: "请选择哪张图片让你感到更加富有: "
-}
+# 加载或初始化对比次数统计文件
+if not os.path.exists(COUNT_CSV):
+    with open(COUNT_CSV, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Image', 'Comparison_Count'])
+        for image in IMAGES:
+            writer.writerow([image, 0])
 
-def initialize_app():
-    # 从图像文件夹加载所有图片
-    st.session_state.image_list = [
-        os.path.join(IMAGE_FOLDER, f) for f in os.listdir(IMAGE_FOLDER)
-        if f.endswith(('jpg', 'png', 'jpeg'))
-    ]
-    # 初始化CSV文件
-    for current_file in PAIRS_FILES:
-        output_file = OUTPUT_FILES[current_file]
-        if not os.path.exists(output_file):
-            with open(output_file, 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(['User_ID', 'Left_Image', 'Right_Image', 'Result', 'Left_Rating', 'Right_Rating'])
-    # 创建或加载对比次数统计文件
-    if not os.path.exists(COUNT_CSV):
-        with open(COUNT_CSV, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['Image', 'Comparison_Count'])
-    else:
-        # 读取已存在的对比次数
+# 读取当前对比次数
+def read_comparison_counts():
+    comparison_counts = defaultdict(int)
+    if os.path.exists(COUNT_CSV):
         with open(COUNT_CSV, 'r') as f:
             reader = csv.reader(f)
             next(reader)  # 跳过标题
             for row in reader:
-                if row:
-                    st.session_state.comparison_counts[row[0]] = int(row[1])
-    st.session_state.initialized = True
+                comparison_counts[row[0]] = int(row[1])
+    return comparison_counts
 
+# 更新对比次数并保存
 def update_comparison_counts():
-    # 更新对比次数
     with open(COUNT_CSV, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['Image', 'Comparison_Count'])
-        for img, count in st.session_state.comparison_counts.items():
-            writer.writerow([img, count])
+        for image, count in st.session_state.comparison_counts.items():
+            writer.writerow([image, count])
 
-def show_current_pair():
-    # 确保每张图片至少比较4次
-    eligible_images = [img for img in st.session_state.image_list if st.session_state.comparison_counts[img] < 4]
-    if not eligible_images:
-        st.success("所有图片已完成足够对比！")
-        st.stop()
+# 选择图片对比
+def select_image_pair():
+    comparison_counts = read_comparison_counts()
+    
+    # 按照概率减少已出现次数多的图片的出现概率
+    weighted_images = []
+    for image in IMAGES:
+        weight = 1 / (comparison_counts[image] + 1)  # 防止除零
+        weighted_images.extend([image] * int(weight * 100))  # 权重影响选择频率
+    
+    # 随机选择两个不一样的图片
+    random.shuffle(weighted_images)
+    left_img, right_img = weighted_images[0], weighted_images[1]
+    
+    # 更新比较次数
+    st.session_state.comparison_counts[left_img] += 1
+    st.session_state.comparison_counts[right_img] += 1
+    update_comparison_counts()
+    
+    return os.path.join(IMAGE_FOLDER, left_img), os.path.join(IMAGE_FOLDER, right_img)
 
-    # 从未充分对比的图片中随机选择两张进行对比
-    left_img, right_img = random.sample(eligible_images, 2)
+# 主逻辑
+if st.session_state.get("need_rerun", False):
+    st.session_state.need_rerun = False
+    st.rerun()
 
-    # 显示对比
-    st.title("街景图片对比评分系统")
-    st.subheader(f"当前对比计划: {TITLE_MAP[st.session_state.current_file_index]}")
-    st.write(f"**进度**: {st.session_state.current_pair_index + 1}/{len(st.session_state.image_list)}")
-    st.write(f"### {SELECT_TEXT_MAP[st.session_state.current_file_index]}")
+# 显示当前图片对比
+left_img, right_img = select_image_pair()
 
-    col1, col2 = st.columns(2)
-    try:
-        with col1:
-            st.image(Image.open(left_img), use_container_width=True, caption=f"左图: {os.path.basename(left_img)}")
-            st.write(f"已比较次数: {st.session_state.comparison_counts[left_img]}")
-        with col2:
-            st.image(Image.open(right_img), use_container_width=True, caption=f"右图: {os.path.basename(right_img)}")
-            st.write(f"已比较次数: {st.session_state.comparison_counts[right_img]}")
-    except Exception as e:
-        st.error(f"加载图片失败: {str(e)}")
-        return False
+st.title("街景图片对比评分系统")
+st.subheader("请选择您更喜欢的图片")
 
-    return left_img, right_img
+col1, col2 = st.columns(2)
+with col1:
+    st.image(Image.open(left_img), use_container_width=True, caption=f"左图: {os.path.basename(left_img)}")
+with col2:
+    st.image(Image.open(right_img), use_container_width=True, caption=f"右图: {os.path.basename(right_img)}")
 
-def record_selection(left_img, right_img, result):
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("⬅️ 选择左侧", use_container_width=True):
+        result = "left"
+        record_selection(result, left_img, right_img)
+
+with col2:
+    if st.button("🟰 两者相当", use_container_width=True):
+        result = "equal"
+        record_selection(result, left_img, right_img)
+
+with col3:
+    if st.button("➡️ 选择右侧", use_container_width=True):
+        result = "right"
+        record_selection(result, left_img, right_img)
+
+# 记录选择结果
+def record_selection(result, left_img, right_img):
     try:
         if result == "left":
             st.session_state.ratings[left_img], st.session_state.ratings[right_img] = rate_1vs1(
@@ -165,14 +158,9 @@ def record_selection(left_img, right_img, result):
             st.session_state.ratings[left_img], st.session_state.ratings[right_img] = rate_1vs1(
                 st.session_state.ratings[left_img], st.session_state.ratings[right_img], drawn=True)
 
-        # 更新对比次数
-        st.session_state.comparison_counts[left_img] += 1
-        st.session_state.comparison_counts[right_img] += 1
-
-        # 写入结果
-        current_file = PAIRS_FILES[st.session_state.current_file_index]
-        output_file = OUTPUT_FILES[current_file]
-        with open(output_file, 'a', newline='') as f:
+        # 写入对比结果到文件
+        current_file = OUTPUT_FILES.get("comparison_results_beautiful.csv")  # 在此添加您选择的对应文件
+        with open(current_file, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
                 st.session_state.user_id,
@@ -183,33 +171,7 @@ def record_selection(left_img, right_img, result):
                 f"{st.session_state.ratings[right_img].mu:.3f}±{st.session_state.ratings[right_img].sigma:.3f}"
             ])
 
-        # 更新对比次数CSV
-        update_comparison_counts()
-
         st.session_state.need_rerun = True
 
     except Exception as e:
         st.error(f"记录选择时出错: {str(e)}")
-
-# 主逻辑
-if not st.session_state.initialized:
-    initialize_app()
-
-if st.session_state.initialized:
-    pair = show_current_pair()
-    if pair:
-        left_img, right_img = pair
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("⬅️ 选择左侧", use_container_width=True):
-                record_selection(left_img, right_img, "left")
-        with col2:
-            if st.button("🟰 两者相当", use_container_width=True):
-                record_selection(left_img, right_img, "equal")
-        with col3:
-            if st.button("➡️ 选择右侧", use_container_width=True):
-                record_selection(left_img, right_img, "right")
-
-if st.session_state.get("need_rerun", False):
-    st.session_state.need_rerun = False
-    st.rerun()
