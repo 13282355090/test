@@ -74,8 +74,7 @@ if os.path.exists(COUNT_CSV):
 
 # 检查是否当前维度已完成
 def check_current_dim_complete():
-    active_imgs = [img for img in ALL_IMAGES if st.session_state.comparison_counts[img][st.session_state.current_dim] < 5]
-    return len(active_imgs) < 2
+    return all(counts[st.session_state.current_dim] >= 5 for counts in st.session_state.comparison_counts.values())
 
 # 迭代到下一个维度
 while st.session_state.current_dim < len(PERCEPTIONS) and check_current_dim_complete():
@@ -90,11 +89,10 @@ result_csv = RESULT_CSV_TEMPLATE.format(current_dim_name)
 
 # 权重策略（次数越多，权重越小）
 def weighted_random_pair():
-    eligible_imgs = [img for img in ALL_IMAGES if st.session_state.comparison_counts[img][st.session_state.current_dim] < 5]
-    weights = [1 / (1 + st.session_state.comparison_counts[img][st.session_state.current_dim]) for img in eligible_imgs]
-    pair = random.choices(eligible_imgs, weights=weights, k=2)
+    weights = [1 / (1 + st.session_state.comparison_counts[img][st.session_state.current_dim]) for img in ALL_IMAGES]
+    pair = random.choices(ALL_IMAGES, weights=weights, k=2)
     while pair[0] == pair[1]:
-        pair[1] = random.choices(eligible_imgs, weights=weights, k=1)[0]
+        pair[1] = random.choices(ALL_IMAGES, weights=weights, k=1)[0]
     return pair
 
 left_img, right_img = weighted_random_pair()
