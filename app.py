@@ -13,7 +13,7 @@ COUNT_CSV = "image_comparison_counts.csv"
 
 # 初始化图片列表
 ALL_IMAGES = [os.path.join(IMAGE_FOLDER, img) for img in os.listdir(IMAGE_FOLDER)
-              if img.lower().endswith(('jpg', 'jpeg', 'png'))]
+               if img.lower().endswith(('jpg', 'jpeg', 'png'))]
 
 # 管理员登录
 st.sidebar.subheader("管理员登录")
@@ -109,21 +109,9 @@ with col2:
     st.image(Image.open(right_img), use_container_width=True, caption=f"右图: {os.path.basename(right_img)}")
     st.write(f"对比次数: {st.session_state.comparison_counts[right_img][st.session_state.current_dim]}")
 
-# 添加提示语
-st.markdown(f"**您认为哪张图片更 {current_dim_name}？**")
+# 显示提示文字
+st.markdown(f"### 您认为哪张图片更『{current_dim_name}』？")
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    if st.button("⬅️ 选择左侧", use_container_width=True):
-        record_result("left")
-with col2:
-    if st.button("🟰 两者相当", use_container_width=True):
-        record_result("equal")
-with col3:
-    if st.button("➡️ 选择右侧", use_container_width=True):
-        record_result("right")
-
-# 记录结果函数
 def record_result(result):
     l, r = left_img, right_img
     if result == "left":
@@ -140,7 +128,7 @@ def record_result(result):
         writer = csv.writer(f)
         if f.tell() == 0:
             writer.writerow(['User_ID', 'Left_Image', 'Right_Image', 'Result', 'Left_Rating', 'Right_Rating'])
-        writer.writerow([
+        writer.writerow([ 
             st.session_state.user_id,
             os.path.basename(l),
             os.path.basename(r),
@@ -157,3 +145,14 @@ def record_result(result):
             writer.writerow([os.path.basename(img)] + counts)
 
     st.rerun()
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("⬅️ 选择左侧", use_container_width=True):
+        record_result("left")
+with col2:
+    if st.button("🟰 两者相当", use_container_width=True):
+        record_result("equal")
+with col3:
+    if st.button("➡️ 选择右侧", use_container_width=True):
+        record_result("right")
