@@ -1,17 +1,15 @@
 import streamlit as st
-import uuid
+import os
 import csv
 from collections import defaultdict
 from trueskill import Rating, rate_1vs1
 from PIL import Image
-import os
-from streamlit_cookies_manager import Cookies
 
 # 配置路径
 IMAGE_FOLDER = "image"
 PAIRS_FILES = [
-    "comparison_pairs_beautiful.csv", "comparison_pairs_boring.csv", 
-    "comparison_pairs_depressing.csv", "comparison_pairs_lively.csv", 
+    "comparison_pairs_beautiful.csv", "comparison_pairs_boring.csv",
+    "comparison_pairs_depressing.csv", "comparison_pairs_lively.csv",
     "comparison_pairs_safety.csv", "comparison_pairs_wealthy.csv"
 ]
 OUTPUT_FILES = {
@@ -24,22 +22,6 @@ OUTPUT_FILES = {
 }
 COUNT_CSV = "image_comparison_counts.csv"
 
-# 使用 cookies 管理用户标识符
-cookies = Cookies(st)
-
-# 检查是否已有用户唯一标识符
-if 'user_id' not in cookies:
-    # 如果没有，生成一个新的 UUID 并存入 cookies
-    user_id = str(uuid.uuid4())  # 生成唯一的 UUID
-    cookies['user_id'] = user_id
-    cookies.save()  # 保存 Cookie
-else:
-    # 如果已有，则读取存储的 user_id
-    user_id = cookies['user_id']
-
-# 显示当前用户 ID（可用于调试）
-st.write(f"当前用户 ID: {user_id}")
-
 # 管理员登录
 st.sidebar.subheader("管理员登录")
 admin_password = st.sidebar.text_input("请输入管理员密码", type="password")
@@ -48,7 +30,6 @@ if admin_password == "2023202090005":
     st.sidebar.success("身份验证成功")
     st.success("密码正确，请点击下方按钮下载所有结果文件：")
 
-    # 下载图片比较次数统计文件
     if os.path.exists(COUNT_CSV):
         with open(COUNT_CSV, "rb") as f:
             bytes_data = f.read()
@@ -59,7 +40,6 @@ if admin_password == "2023202090005":
                 mime="text/csv"
             )
 
-    # 下载每个对比计划的结果文件
     for input_file, output_file in OUTPUT_FILES.items():
         if os.path.exists(output_file):
             with open(output_file, "rb") as f:
@@ -74,6 +54,15 @@ if admin_password == "2023202090005":
 
     st.stop()
 
+# 用户 ID 输入
+if 'user_id' not in st.session_state:
+    user_id_input = st.text_input("请输入你的用户ID以开始：")
+    if user_id_input:
+        st.session_state.user_id = user_id_input
+        st.experimental_rerun()
+    else:
+        st.stop()
+
 # 初始化状态
 if 'initialized' not in st.session_state:
     st.session_state.ratings = defaultdict(lambda: Rating())
@@ -87,7 +76,6 @@ if 'initialized' not in st.session_state:
 TITLE_MAP = {
     0: "美丽", 1: "无聊", 2: "压抑", 3: "活力", 4: "安全", 5: "财富"
 }
-
 SELECT_TEXT_MAP = {
     0: "请选择哪张图片让你感到更加美丽:",
     1: "请选择哪张图片让你感到更加无聊:",
@@ -106,8 +94,7 @@ def initialize_app():
             reader = csv.reader(f)
             next(reader)
             for row in reader:
-                # 校验图片路径有效
-                if len(row) >= 2 and row[0].strip() and row[1].strip():
+                if len(row) >= 2:
                     left_img = os.path.join(IMAGE_FOLDER, row[0].strip())
                     right_img = os.path.join(IMAGE_FOLDER, row[1].strip())
                     if os.path.exists(left_img) and os.path.exists(right_img):
@@ -118,10 +105,9 @@ def initialize_app():
             if not os.path.exists(output_file):
                 with open(output_file, 'w', newline='') as f:
                     writer = csv.writer(f)
-                    writer.writerow(['Left_Image', 'Right_Image', 'Result', 'Left_Rating', 'Right_Rating'])
+                    writer.writerow(['User_ID', 'Left_Image', 'Right_Image', 'Result', 'Left_Rating', 'Right_Rating'])
             st.session_state.initialized = True
             return
-
         else:
             st.session_state.current_file_index += 1
 
@@ -140,9 +126,7 @@ def remove_current_pair_from_csv():
             reader = csv.reader(f)
             header = next(reader)
             for row in reader:
-                if len(row) >= 2 and not (
-                    row[0].strip() == left_basename and row[1].strip() == right_basename
-                ):
+                if len(row) >= 2 and not (row[0].strip() == left_basename and row[1].strip() == right_basename):
                     updated_rows.append(row)
 
         with open(current_file, 'w', newline='') as f:
@@ -204,12 +188,12 @@ def record_selection(result):
         with open(output_file, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
+                st.session_state.user_id,
                 os.path.basename(left_img),
                 os.path.basename(right_img),
                 result,
                 f"{st.session_state.ratings[left_img].mu:.3f}±{st.session_state.ratings[left_img].sigma:.3f}",
-                f"{st.session_state.ratings[right_img].mu:.3f}±{st.session_state.ratings[right_img].sigma:.3f}",
-                user_id  # 使用 Cookies 存储的 user_id
+                f"{st.session_state.ratings[right_img].mu:.3f}±{st.session_state.ratings[right_img].sigma:.3f}"
             ])
 
         remove_current_pair_from_csv()
