@@ -7,7 +7,7 @@ from trueskill import Rating, rate_1vs1
 from PIL import Image
 
 # 配置路径
-IMAGE_FOLDER = "image2"
+IMAGE_FOLDER = "images"
 PER_IMAGE_MIN_COMPARISONS = 2
 TITLE_MAP = {
     0: "美丽", 1: "无聊", 2: "压抑", 3: "活力", 4: "安全", 5: "财富"
