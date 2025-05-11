@@ -59,9 +59,10 @@ if 'user_id' not in st.session_state:
     user_id_input = st.text_input("请输入你的用户ID以开始：")
     if user_id_input:
         st.session_state.user_id = user_id_input
-        st.experimental_rerun()
+        st.rerun()  # Use st.rerun() instead of st.experimental_rerun()
     else:
         st.stop()
+
 
 # 初始化状态
 if 'initialized' not in st.session_state:
