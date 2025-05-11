@@ -6,148 +6,108 @@ from collections import defaultdict
 from trueskill import Rating, rate_1vs1
 from PIL import Image
 
-# 配置路径
 IMAGE_FOLDER = "images"
-OUTPUT_FILES = {
-    "comparison_pairs_beautiful.csv": "comparison_results_beautiful.csv",
-    "comparison_pairs_boring.csv": "comparison_results_boring.csv",
-    "comparison_pairs_depressing.csv": "comparison_results_depressing.csv",
-    "comparison_pairs_lively.csv": "comparison_results_lively.csv",
-    "comparison_pairs_safety.csv": "comparison_results_safety.csv",
-    "comparison_pairs_wealthy.csv": "comparison_results_wealthy.csv"
-}
+PERCEPTIONS = ["美丽", "无聊", "压抑", "活力", "安全", "富有"]
+RESULT_CSV_TEMPLATE = "comparison_results_{}.csv"
 COUNT_CSV = "image_comparison_counts.csv"
 
-# 管理员登录
-st.sidebar.subheader("管理员登录")
-admin_password = st.sidebar.text_input("请输入管理员密码", type="password")
+# 初始化图片列表
+ALL_IMAGES = [os.path.join(IMAGE_FOLDER, img) for img in os.listdir(IMAGE_FOLDER)
+               if img.lower().endswith(('jpg', 'jpeg', 'png'))]
 
-if admin_password == "2023202090005":
-    st.sidebar.success("身份验证成功")
-    st.success("密码正确，请点击下方按钮下载所有结果文件：")
+# 选择维度
+selected_dim = st.selectbox("请选择您要对比的感知维度：", options=PERCEPTIONS, index=0)
 
-    if os.path.exists(COUNT_CSV):
-        with open(COUNT_CSV, "rb") as f:
-            bytes_data = f.read()
-            st.download_button(
-                label="📊 下载图片比较次数统计",
-                data=bytes_data,
-                file_name="image_comparison_counts.csv",
-                mime="text/csv"
-            )
-
-    for output_file in OUTPUT_FILES.values():
-        if os.path.exists(output_file):
-            with open(output_file, "rb") as f:
-                file_bytes = f.read()
-                label_name = output_file.replace("comparison_results_", "").replace(".csv", "")
-                st.download_button(
-                    label=f"⬇️ 下载 {label_name} 结果文件",
-                    data=file_bytes,
-                    file_name=output_file,
-                    mime="text/csv"
-                )
-
-    st.stop()
+dim_index = PERCEPTIONS.index(selected_dim)
+result_csv = RESULT_CSV_TEMPLATE.format(selected_dim)
 
 # 用户 ID 输入
 if 'user_id' not in st.session_state:
     user_id_input = st.text_input("请输入你的用户ID以开始：")
     if user_id_input:
         st.session_state.user_id = user_id_input
-        st.rerun()  # Use st.rerun() instead of st.experimental_rerun()
+        st.rerun()
     else:
         st.stop()
 
 # 初始化状态
-if 'initialized' not in st.session_state:
-    st.session_state.image_list = [
-        os.path.join(IMAGE_FOLDER, img) for img in os.listdir(IMAGE_FOLDER)
-        if img.lower().endswith(('.jpg', '.jpeg', '.png')) and os.path.isfile(os.path.join(IMAGE_FOLDER, img))
-    ]
-    st.session_state.comparison_counts = defaultdict(int)
+if 'ratings' not in st.session_state:
     st.session_state.ratings = defaultdict(lambda: Rating())
-    st.session_state.need_rerun = False
+    st.session_state.comparison_counts = {img: [0]*len(PERCEPTIONS) for img in ALL_IMAGES}
 
-# 随机加权选择图片对
+# 加载已有比较数据
+if os.path.exists(COUNT_CSV):
+    with open(COUNT_CSV, newline='') as f:
+        reader = csv.reader(f)
+        header = next(reader)
+        for row in reader:
+            name = os.path.join(IMAGE_FOLDER, row[0])
+            if name in st.session_state.comparison_counts:
+                st.session_state.comparison_counts[name] = list(map(int, row[1:]))
+
+# 权重策略（次数越多，权重越小）
 def weighted_random_pair():
-    images = st.session_state.image_list
-    counts = st.session_state.comparison_counts
+    weights = [1 / (1 + st.session_state.comparison_counts[img][dim_index]) for img in ALL_IMAGES]
+    pair = random.choices(ALL_IMAGES, weights=weights, k=2)
+    while pair[0] == pair[1]:
+        pair[1] = random.choices(ALL_IMAGES, weights=weights, k=1)[0]
+    return pair
 
-    # 计算每张图片的权重（出现次数越少，权重越高）
-    weights = [1 / (1 + counts[img]) for img in images]
+left_img, right_img = weighted_random_pair()
 
-    # 抽取两张不重复的图片
-    selected = random.choices(images, weights=weights, k=2)
-    while selected[0] == selected[1]:
-        selected = random.choices(images, weights=weights, k=2)
-    return selected[0], selected[1]
+# 显示图像
+st.title("街景图片对比评分系统")
+st.subheader(f"当前对比维度: {selected_dim}")
 
-# 显示当前图片对
-def show_current_pair():
-    left_img, right_img = weighted_random_pair()
-    st.session_state.current_pair = (left_img, right_img)
+col1, col2 = st.columns(2)
+with col1:
+    st.image(Image.open(left_img), use_container_width=True, caption=f"左图: {os.path.basename(left_img)}")
+    st.write(f"对比次数: {st.session_state.comparison_counts[left_img][dim_index]}")
+with col2:
+    st.image(Image.open(right_img), use_container_width=True, caption=f"右图: {os.path.basename(right_img)}")
+    st.write(f"对比次数: {st.session_state.comparison_counts[right_img][dim_index]}")
 
-    st.title("街景图片对比评分系统")
-    st.subheader("当前对比任务（随机）")
-    st.write("请选择更符合主题的图片（主题在设计时自定义）：")
+def record_result(result):
+    l, r = left_img, right_img
+    if result == "left":
+        st.session_state.ratings[l], st.session_state.ratings[r] = rate_1vs1(st.session_state.ratings[l], st.session_state.ratings[r])
+    elif result == "right":
+        st.session_state.ratings[r], st.session_state.ratings[l] = rate_1vs1(st.session_state.ratings[r], st.session_state.ratings[l])
+    else:
+        st.session_state.ratings[l], st.session_state.ratings[r] = rate_1vs1(st.session_state.ratings[l], st.session_state.ratings[r], drawn=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.image(Image.open(left_img), use_container_width=True, caption=f"左图: {os.path.basename(left_img)}")
-        st.write(f"已比较次数: {st.session_state.comparison_counts[left_img]}")
-    with col2:
-        st.image(Image.open(right_img), use_container_width=True, caption=f"右图: {os.path.basename(right_img)}")
-        st.write(f"已比较次数: {st.session_state.comparison_counts[right_img]}")
+    st.session_state.comparison_counts[l][dim_index] += 1
+    st.session_state.comparison_counts[r][dim_index] += 1
 
-# 记录选择
-def record_selection(result):
-    try:
-        left_img, right_img = st.session_state.current_pair
+    with open(result_csv, 'a', newline='') as f:
+        writer = csv.writer(f)
+        if f.tell() == 0:
+            writer.writerow(['User_ID', 'Left_Image', 'Right_Image', 'Result', 'Left_Rating', 'Right_Rating'])
+        writer.writerow([
+            st.session_state.user_id,
+            os.path.basename(l),
+            os.path.basename(r),
+            result,
+            f"{st.session_state.ratings[l].mu:.3f}±{st.session_state.ratings[l].sigma:.3f}",
+            f"{st.session_state.ratings[r].mu:.3f}±{st.session_state.ratings[r].sigma:.3f}"
+        ])
 
-        if result == "left":
-            st.session_state.ratings[left_img], st.session_state.ratings[right_img] = rate_1vs1(
-                st.session_state.ratings[left_img], st.session_state.ratings[right_img])
-        elif result == "right":
-            st.session_state.ratings[right_img], st.session_state.ratings[left_img] = rate_1vs1(
-                st.session_state.ratings[right_img], st.session_state.ratings[left_img])
-        else:
-            st.session_state.ratings[left_img], st.session_state.ratings[right_img] = rate_1vs1(
-                st.session_state.ratings[left_img], st.session_state.ratings[right_img], drawn=True)
+    # 更新次数统计CSV
+    with open(COUNT_CSV, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Image"] + list(range(len(PERCEPTIONS))))
+        for img, counts in st.session_state.comparison_counts.items():
+            writer.writerow([os.path.basename(img)] + counts)
 
-        st.session_state.comparison_counts[left_img] += 1
-        st.session_state.comparison_counts[right_img] += 1
+    st.rerun()
 
-        # 记录结果到总文件
-        with open("comparison_log.csv", 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                st.session_state.user_id,
-                os.path.basename(left_img),
-                os.path.basename(right_img),
-                result,
-                f"{st.session_state.ratings[left_img].mu:.3f}±{st.session_state.ratings[left_img].sigma:.3f}",
-                f"{st.session_state.ratings[right_img].mu:.3f}±{st.session_state.ratings[right_img].sigma:.3f}"
-            ])
-
-        st.rerun()
-
-    except Exception as e:
-        st.error(f"记录选择时出错: {str(e)}")
-
-# 主逻辑
-if st.session_state.need_rerun:
-    st.session_state.need_rerun = False
-    show_current_pair()
-
-if not st.session_state.need_rerun:
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("⬅️ 选择左侧", use_container_width=True):
-            record_selection("left")
-    with col2:
-        if st.button("🟰 两者相当", use_container_width=True):
-            record_selection("equal")
-    with col3:
-        if st.button("➡️ 选择右侧", use_container_width=True):
-            record_selection("right")
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("⬅️ 选择左侧", use_container_width=True):
+        record_result("left")
+with col2:
+    if st.button("🟰 两者相当", use_container_width=True):
+        record_result("equal")
+with col3:
+    if st.button("➡️ 选择右侧", use_container_width=True):
+        record_result("right")
