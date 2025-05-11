@@ -15,12 +15,6 @@ COUNT_CSV = "image_comparison_counts.csv"
 ALL_IMAGES = [os.path.join(IMAGE_FOLDER, img) for img in os.listdir(IMAGE_FOLDER)
                if img.lower().endswith(('jpg', 'jpeg', 'png'))]
 
-# 选择维度
-selected_dim = st.selectbox("请选择您要对比的感知维度：", options=PERCEPTIONS, index=0)
-
-dim_index = PERCEPTIONS.index(selected_dim)
-result_csv = RESULT_CSV_TEMPLATE.format(selected_dim)
-
 # 管理员登录
 st.sidebar.subheader("管理员登录")
 admin_password = st.sidebar.text_input("请输入管理员密码", type="password")
@@ -29,7 +23,6 @@ if admin_password == "2023202090005":
     st.sidebar.success("身份验证成功")
     st.success("密码正确，请点击下方按钮下载所有结果文件：")
 
-    # 下载比较次数统计文件
     if os.path.exists(COUNT_CSV):
         with open(COUNT_CSV, "rb") as f:
             bytes_data = f.read()
@@ -40,7 +33,6 @@ if admin_password == "2023202090005":
                 mime="text/csv"
             )
 
-    # 下载每个维度的结果文件
     for dim in PERCEPTIONS:
         output_file = RESULT_CSV_TEMPLATE.format(dim)
         if os.path.exists(output_file):
@@ -68,6 +60,7 @@ if 'user_id' not in st.session_state:
 if 'ratings' not in st.session_state:
     st.session_state.ratings = defaultdict(lambda: Rating())
     st.session_state.comparison_counts = {img: [0] * len(PERCEPTIONS) for img in ALL_IMAGES}
+    st.session_state.current_dim = 0
 
 # 加载已有比较数据
 if os.path.exists(COUNT_CSV):
@@ -79,9 +72,24 @@ if os.path.exists(COUNT_CSV):
             if name in st.session_state.comparison_counts:
                 st.session_state.comparison_counts[name] = list(map(int, row[1:]))
 
+# 检查是否当前维度已完成
+def check_current_dim_complete():
+    return all(counts[st.session_state.current_dim] >= 5 for counts in st.session_state.comparison_counts.values())
+
+# 迭代到下一个维度
+while st.session_state.current_dim < len(PERCEPTIONS) and check_current_dim_complete():
+    st.session_state.current_dim += 1
+
+if st.session_state.current_dim >= len(PERCEPTIONS):
+    st.success("所有维度对比已完成，感谢您的参与！")
+    st.stop()
+
+current_dim_name = PERCEPTIONS[st.session_state.current_dim]
+result_csv = RESULT_CSV_TEMPLATE.format(current_dim_name)
+
 # 权重策略（次数越多，权重越小）
 def weighted_random_pair():
-    weights = [1 / (1 + st.session_state.comparison_counts[img][dim_index]) for img in ALL_IMAGES]
+    weights = [1 / (1 + st.session_state.comparison_counts[img][st.session_state.current_dim]) for img in ALL_IMAGES]
     pair = random.choices(ALL_IMAGES, weights=weights, k=2)
     while pair[0] == pair[1]:
         pair[1] = random.choices(ALL_IMAGES, weights=weights, k=1)[0]
@@ -91,15 +99,15 @@ left_img, right_img = weighted_random_pair()
 
 # 显示图像
 st.title("街景图片对比评分系统")
-st.subheader(f"当前对比维度: {selected_dim}")
+st.subheader(f"当前对比维度: {current_dim_name}")
 
 col1, col2 = st.columns(2)
 with col1:
     st.image(Image.open(left_img), use_container_width=True, caption=f"左图: {os.path.basename(left_img)}")
-    st.write(f"对比次数: {st.session_state.comparison_counts[left_img][dim_index]}")
+    st.write(f"对比次数: {st.session_state.comparison_counts[left_img][st.session_state.current_dim]}")
 with col2:
     st.image(Image.open(right_img), use_container_width=True, caption=f"右图: {os.path.basename(right_img)}")
-    st.write(f"对比次数: {st.session_state.comparison_counts[right_img][dim_index]}")
+    st.write(f"对比次数: {st.session_state.comparison_counts[right_img][st.session_state.current_dim]}")
 
 def record_result(result):
     l, r = left_img, right_img
@@ -110,8 +118,8 @@ def record_result(result):
     else:
         st.session_state.ratings[l], st.session_state.ratings[r] = rate_1vs1(st.session_state.ratings[l], st.session_state.ratings[r], drawn=True)
 
-    st.session_state.comparison_counts[l][dim_index] += 1
-    st.session_state.comparison_counts[r][dim_index] += 1
+    st.session_state.comparison_counts[l][st.session_state.current_dim] += 1
+    st.session_state.comparison_counts[r][st.session_state.current_dim] += 1
 
     with open(result_csv, 'a', newline='') as f:
         writer = csv.writer(f)
