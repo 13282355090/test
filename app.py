@@ -7,7 +7,7 @@ from trueskill import Rating, rate_1vs1
 from PIL import Image
 
 # 配置路径
-IMAGE_FOLDER = "images"
+IMAGE_FOLDER = "image"
 PAIRS_FILES = [
     "comparison_pairs_beautiful.csv", "comparison_pairs_boring.csv",
     "comparison_pairs_depressing.csv", "comparison_pairs_lively.csv",
