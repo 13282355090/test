@@ -112,12 +112,12 @@ st.subheader(f"当前对比维度: {current_dim_name}")
 col1, col2 = st.columns(2)
 with col1:
     st.image(Image.open(left_img), use_container_width=True)
-    st.markdown(f"<h4>左图: {os.path.basename(left_img)}</h4>", unsafe_allow_html=True)
+    st.markdown(f"<h4>左图</h4>: {os.path.basename(left_img)}", unsafe_allow_html=True)
     st.write(f"对比次数: {st.session_state.comparison_counts[left_img][st.session_state.current_dim]}")
 
 with col2:
     st.image(Image.open(right_img), use_container_width=True)
-    st.markdown(f"<h4>右图: {os.path.basename(right_img)}</h4>", unsafe_allow_html=True)
+    st.markdown(f"<h4>右图</h4>: {os.path.basename(right_img)}", unsafe_allow_html=True)
     st.write(f"对比次数: {st.session_state.comparison_counts[right_img][st.session_state.current_dim]}")
 
 
