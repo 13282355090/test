@@ -106,7 +106,7 @@ def weighted_random_pair():
 left_img, right_img = weighted_random_pair()
 
 # 显示图像
-st.title("街景图片对比评分系统")
+st.title(f"### 您认为哪张图片更『{current_dim_name}』？")
 st.subheader(f"当前对比维度: {current_dim_name}")
 
 col1, col2 = st.columns(2)
