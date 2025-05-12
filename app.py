@@ -111,11 +111,15 @@ st.subheader(f"当前对比维度: {current_dim_name}")
 
 col1, col2 = st.columns(2)
 with col1:
-    st.image(Image.open(left_img), use_container_width=True, caption=f"左图: {os.path.basename(left_img)}")
+    st.image(Image.open(left_img), use_container_width=True)
+    st.markdown(f"<h4>左图: {os.path.basename(left_img)}</h4>", unsafe_allow_html=True)
     st.write(f"对比次数: {st.session_state.comparison_counts[left_img][st.session_state.current_dim]}")
+
 with col2:
-    st.image(Image.open(right_img), use_container_width=True, caption=f"右图: {os.path.basename(right_img)}")
+    st.image(Image.open(right_img), use_container_width=True)
+    st.markdown(f"<h4>右图: {os.path.basename(right_img)}</h4>", unsafe_allow_html=True)
     st.write(f"对比次数: {st.session_state.comparison_counts[right_img][st.session_state.current_dim]}")
+
 
 # 显示提示文字
 st.markdown(f"### 您认为哪张图片更『{current_dim_name}』？")
